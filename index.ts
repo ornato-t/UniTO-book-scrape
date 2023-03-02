@@ -10,8 +10,8 @@ const page = await browser.newPage();
 await page.goto(URL);
 await new Promise(r => setTimeout(r, 1000));
 
-await page.type('input[name="j_USERNAME"]', USERNAME);
-await page.type('input[name="j_PWD"]', PWD);
+await page.type('input[name="j_username"]', USERNAME);
+await page.type('input[name="j_password"]', PWD);
 
 await Promise.all([page.waitForNavigation(), page.click('button[name="_eventId_proceed"]')]);
 
