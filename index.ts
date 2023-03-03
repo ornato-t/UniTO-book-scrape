@@ -14,12 +14,15 @@ try { await Deno.mkdir("output"); } catch (_e) { }
 
 let pageNum = 0;
 let res = 200;
-while (res === 200) {
+while (1) {
     pageNum++;
+    console.log('\tPage', pageNum)
     res = await downloadPage(page, BOOK, pageNum);
+    if (res != 200) console.log(`Error ${res}`);
 }
 
-console.log(`Execution stopped at page ${pageNum} with code ${res}`);
+//TODO: error handling, save page if no text, return error if both are 404. Consider buffer for non existing page (eg: quit after 3 misses)
+
 
 await browser.close();
 
@@ -47,19 +50,6 @@ async function downloadPage(page: Page, bookCode: string, pageNum: number) {
     const textUrl = `http://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=557d76170c245168845e5673708d98fd`;
     const outPath = `output/${pageNum}`;
 
-    //Set handler for image responses
-    page.on('response', async response => {
-        //Save images
-        if (response.url().includes('.jpg')) {
-            const img = await response.arrayBuffer();
-
-            try {
-                await Deno.writeFile(outPath + '.jpeg', new Uint8Array(img));
-                console.log("Written to", outPath + '.jpeg')
-            } catch (e) { console.log(e.message) }
-        }
-    });
-
     //Fetch text page and download it, return in case of error
     try {
         const res = await page.goto(textUrl, { waitUntil: 'networkidle0' });
@@ -70,15 +60,19 @@ async function downloadPage(page: Page, bookCode: string, pageNum: number) {
         console.log("Written to", outPath + '.svg')
     } catch (e) { console.log(e.message); }
 
-    //Fetch image page, handler will download it, return in case of error
+    //Fetch image page and download it, return in case of error
     try {
         const res = await page.goto(imgUrl, { waitUntil: 'load' });
         if (res == null) return -1;
         if (res.status() >= 400) return res.status();
+
+        await Deno.writeFile(outPath + '.jpeg', new Uint8Array(await res.arrayBuffer()));
+        console.log("Written to", outPath + '.jpeg')
     } catch (e) { console.log(e.message); }
 
     return 200;
 
+    //Return a string containing a number with leading zeros, always 4 characters long
     function pageNumFixed(n: number) {
         switch (n.toString().length) {
             case 1:
