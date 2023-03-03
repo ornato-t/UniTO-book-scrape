@@ -14,15 +14,13 @@ try { await Deno.mkdir("output"); } catch (_e) { }
 
 let pageNum = 0;
 let res = 200;
-while (1) {
+while (res === 200) {
     pageNum++;
-    console.log('\tPage', pageNum)
+    console.log('Page', pageNum)
     res = await downloadPage(page, BOOK, pageNum);
-    if (res != 200) console.log(`Error ${res}`);
 }
 
-//TODO: error handling, save page if no text, return error if both are 404. Consider buffer for non existing page (eg: quit after 3 misses)
-
+console.log(`Execution stopped at page ${pageNum} with code ${res}`)
 
 await browser.close();
 
@@ -45,33 +43,37 @@ async function login(page: Page, username: string, password: string) {
 }
 
 //Download a page's text and background
-async function downloadPage(page: Page, bookCode: string, pageNum: number) {
+async function downloadPage(page: Page, bookCode: string, pageNum: number): Promise<number> {
     const imgUrl = `https://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-html5-substrates/page${pageNumFixed(pageNum)}_1.jpg?uni=557d76170c245168845e5673708d98fd`;
     const textUrl = `http://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=557d76170c245168845e5673708d98fd`;
     const outPath = `output/${pageNum}`;
+    let textCode = 200, imgCode = 200;
 
     //Fetch text page and download it, return in case of error
     try {
         const res = await page.goto(textUrl, { waitUntil: 'networkidle0' });
         if (res == null) return -1;
-        if (res.status() >= 400) return res.status();
-
-        Deno.writeTextFileSync(outPath + '.svg', await page.content());
-        console.log("Written to", outPath + '.svg')
+        if (res.status() >= 400) {
+            textCode = res.status();
+            console.log(`\tError ${textCode} when downloading ${pageNum}.svg`)
+        } else {
+            Deno.writeTextFileSync(outPath + '.svg', await page.content());
+        }
     } catch (e) { console.log(e.message); }
 
     //Fetch image page and download it, return in case of error
     try {
         const res = await page.goto(imgUrl, { waitUntil: 'load' });
         if (res == null) return -1;
-        if (res.status() >= 400) return res.status();
-
-        await Deno.writeFile(outPath + '.jpeg', new Uint8Array(await res.arrayBuffer()));
-        console.log("Written to", outPath + '.jpeg')
+        if (res.status() >= 400) {
+            imgCode = res.status();
+            console.log(`\tError ${imgCode} when downloading ${pageNum}.jpg`)
+        } else {
+            await Deno.writeFile(outPath + '.jpeg', new Uint8Array(await res.arrayBuffer()));
+        }
     } catch (e) { console.log(e.message); }
 
-    return 200;
-
+    return textCode === imgCode ? textCode : 200;
     //Return a string containing a number with leading zeros, always 4 characters long
     function pageNumFixed(n: number) {
         switch (n.toString().length) {
