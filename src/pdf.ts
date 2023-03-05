@@ -1,18 +1,18 @@
+import { PDFDocument } from "pdf-lib";
+import puppeteer from "puppeteer";
+import fs from "fs";
+
 const htmlFiles = [
-    "./html/1.html", "./html/2.html",
-    "./html/3.html", "./html/4.html",
-    "./html/5.html", "./html/6.html",
-    "./html/7.html", "./html/8.html",
-    "./html/9.html", "./html/10.html",
-    "./html/11.html", "./html/12.html",
-    "./html/13.html", "./html/14.html",
-    "./html/15.html"
-]; 
+  "./html/1.html", "./html/2.html",
+  "./html/3.html", "./html/4.html",
+  "./html/5.html", "./html/6.html",
+  "./html/7.html", "./html/8.html",
+  "./html/9.html", "./html/10.html",
+  "./html/11.html", "./html/12.html",
+  "./html/13.html", "./html/14.html",
+  "./html/15.html"
+];
 
-
-import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib";
-import puppeteer from "npm:puppeteer";
-  
 const outputPdf = "output.pdf"; // name of the output PDF file
 
 // Set up a Puppeteer browser and page
@@ -26,7 +26,7 @@ const pdfDoc = await PDFDocument.create();
 
 // Load each HTML file, render it to a PDF, and add it to the PDF document
 for (const htmlFile of htmlFiles) {
-  const html = await Deno.readTextFile(htmlFile);
+  const html = fs.readFileSync(htmlFile).toString();
   await page.setContent(html);
   const pdfBytes = await page.pdf({ format: "a4" });
   const pdfDocBytes = await PDFDocument.load(pdfBytes);
@@ -36,7 +36,7 @@ for (const htmlFile of htmlFiles) {
 
 // Save the PDF to a file
 const pdfBytes = await pdfDoc.save();
-await Deno.writeFile(outputPdf, pdfBytes);
+fs.writeFileSync(outputPdf, pdfBytes);
 
 // Close the Puppeteer browser
 await browser.close();

@@ -1,0 +1,26 @@
+{
+  "name": "unito-book-scrape",
+  "version": "1.0.0",
+  "description": " A web scraper and PDF generating script for the virtual library of the UniTO university. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ornato-t/UniTO-book-scrape.git"
+  },
+  "author": "ornato-t",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ornato-t/UniTO-book-scrape/issues"
+  },
+  "homepage": "https://github.com/ornato-t/UniTO-book-scrape#readme",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^19.7.2"
+  },
+  "type": "module"
+}
