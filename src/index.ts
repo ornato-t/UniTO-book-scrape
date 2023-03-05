@@ -3,7 +3,7 @@ import dotenv from "dotenv"
 import fs from "fs"
 
 dotenv.config();
-const USERNAME = process.env.USERNAME ?? '';
+const USERNAME = process.env.NAME ?? '';
 const PWD = process.env.PWD ?? '';
 const BOOK = process.env.BOOK ?? '';
 
@@ -72,7 +72,7 @@ async function downloadPage(page: Page, bookCode: string, pageNum: number): Prom
         if (res != null)
             if (res.status() >= 400) {
                 textCode = res.status();
-                console.log(`\tError ${textCode} while downloading ${pageNum}.svg`)
+                console.log(`\tError ${textCode} while downloading ${pageNum}.svg`);
             } else {
                 fs.writeFileSync(outPath + '.svg', await page.content());
                 paths.fontFile = outPath + '.svg';
@@ -85,9 +85,9 @@ async function downloadPage(page: Page, bookCode: string, pageNum: number): Prom
         if (res != null)
             if (res.status() >= 400) {
                 imgCode = res.status();
-                console.log(`\tError ${imgCode} while downloading ${pageNum}.jpg`)
+                console.log(`\tError ${imgCode} while downloading ${pageNum}.jpg`);
             } else {
-                await fs.writeFile(outPath + '.jpeg', new Uint8Array(await res.buffer()), ((e) => {throw e}));
+                fs.writeFileSync(outPath + '.jpeg', new Uint8Array(await res.buffer()));
                 paths.backgroundImage = outPath + '.jpeg';
             }
     } catch (e) { console.log(e); }
