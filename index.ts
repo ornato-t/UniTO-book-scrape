@@ -8,24 +8,30 @@ const page = await browser.newPage();
 
 await login(page, USERNAME, PWD);
 
-//Create new output dir. Pass if command fails (dir already exists)
+//Create new downloads dir. Pass if command fails (dir already exists)
 // deno-lint-ignore no-empty
-try { await Deno.mkdir("output"); } catch (_e) { }
+try { await Deno.mkdir("downloads"); } catch (_e) { }
+// deno-lint-ignore no-empty
+try { await Deno.mkdir("html"); } catch (_e) { }
 
-const pages = new Array<PDFPage>
 let pageNum = 0;
+let path: string | null;   //Last HTML file generated
+const pathList: string[] = []; //Array of paths to HTML files
 do {
     pageNum++;
     console.log('Page', pageNum)
-    pages[pageNum] = await downloadPage(page, BOOK, pageNum);
-} while (Object.keys(pages[pageNum]).length !== 0)
+    const sourcePaths = await downloadPage(page, BOOK, pageNum);
+    path = generateHTML(sourcePaths, pageNum);
+    if (path != null) pathList.push(path);
+    if(pageNum === 15) break;
+} while (path !== null)
 
 console.log(`Execution stopped at page ${pageNum}`);
-pages.shift();  //The first element is empty, remove it
 
 await browser.close();
 
-await createPDF('microbiologia.pdf', pages);
+await genereatePDF('microbiologia', pathList);
+
 
 //Login to the UniTO intranet
 async function login(page: Page, username: string, password: string) {
@@ -46,12 +52,12 @@ async function login(page: Page, username: string, password: string) {
 }
 
 //Download a page's text and background
-async function downloadPage(page: Page, bookCode: string, pageNum: number): Promise<PDFPage> {
+async function downloadPage(page: Page, bookCode: string, pageNum: number): Promise<HTMLPage> {
     const imgUrl = `https://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-html5-substrates/page${pageNumFixed(pageNum)}_1.jpg?uni=557d76170c245168845e5673708d98fd`;
     const textUrl = `http://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=557d76170c245168845e5673708d98fd`;
-    const outPath = `output/${pageNum}`;
+    const outPath = `downloads/${pageNum}`;
     let textCode = 200, imgCode = 200;
-    const paths: PDFPage = new Object();
+    const paths: HTMLPage = new Object();
 
     //Fetch text page and download it, return in case of error
     try {
@@ -95,12 +101,49 @@ async function downloadPage(page: Page, bookCode: string, pageNum: number): Prom
     }
 }
 
-//Generate a PDF from the downloaded files
-async function createPDF(name: string, pages: PDFPage[]) {
+//Combine a .jpeg image and some .svg text to form a .html page. Return the path to that page or null in case of an error
+function generateHTML(paths: HTMLPage, page: number) {
+    const outPath = `./html/${page}.html`;
+    if (paths.backgroundImage !== undefined && paths.fontFile !== undefined) {  //Both background and text
+        const html = `<!DOCTYPE html> <html> <head>
+        <title>Pagina ${page}</title> 
+        <style> html, body { height: 100%; margin: 0; padding: 0; } .background { position: relative; height: 100%; width: 100%; } .background img,object { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } </style> </head> <body> <div class="background">
+        <img draggable="false" src="../${paths.backgroundImage}">
+        <object type="image/svg+xml" data="../${paths.fontFile}"></object>
+        </div> </body> </html>`;
 
+        Deno.writeTextFileSync(outPath, html);
+        return outPath;
+    } else if (paths.backgroundImage !== undefined) {   //Only background, no text
+        const html = `<!DOCTYPE html> <html> <head>
+        <title>Pagina ${page}</title> 
+        <style> html, body { height: 100%; margin: 0; padding: 0; } .background { position: relative; height: 100%; width: 100%; } .background img,object { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } </style> </head> <body> <div class="background">
+        <img draggable="false" src="../${paths.backgroundImage}">
+        </div> </body> </html>`;
+
+        Deno.writeTextFileSync(outPath, html);
+        return outPath;
+    } else if (paths.fontFile !== undefined) {  //Only text no background (unlikely)
+        const html = `<!DOCTYPE html> <html> <head>
+        <title>Pagina ${page}</title> 
+        <style> html, body { height: 100%; margin: 0; padding: 0; } .background { position: relative; height: 100%; width: 100%; } .background img,object { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } </style> </head> <body> <div class="background">
+        <object type="image/svg+xml" data="../${paths.fontFile}"></object>
+        </div> </body> </html>`;
+
+        Deno.writeTextFileSync(outPath, html);
+        return outPath;
+    }
+
+    return null;
 }
 
-interface PDFPage {
+async function genereatePDF(fileName: string, paths: string[]) {
+    fileName += '.pdf';
+    console.log(fileName)
+    console.log(paths)
+}
+
+interface HTMLPage {
     backgroundImage?: string,
     fontFile?: string
 }

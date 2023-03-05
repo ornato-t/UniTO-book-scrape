@@ -1,4 +1,5 @@
 .env
 *.png
-/output
+/downloads
+/html
 /.vscode
