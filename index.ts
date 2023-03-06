@@ -1,6 +1,10 @@
 import puppeteer, { Page } from "puppeteer";
+import { PDFDocument } from "pdf-lib"
 import dotenv from "dotenv"
 import fs from "fs"
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
 
 dotenv.config();
 const USERNAME = process.env.NAME ?? '';
@@ -10,35 +14,45 @@ const BOOK = process.env.BOOK ?? '';
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
 
+console.log('Attempting login')
 await login(page, USERNAME, PWD);
+console.log('Login succesful')
 
 //Create new downloads dir
-if (!fs.existsSync('downloads')){
+if (!fs.existsSync('downloads')) {
     fs.mkdirSync('downloads');
 }
 //Create new html dir
-if (!fs.existsSync('html')){
+if (!fs.existsSync('html')) {
     fs.mkdirSync('html');
 }
 
 let pageNum = 0;
 let path: string | null;   //Last HTML file generated
 const pathList: string[] = []; //Array of paths to HTML files
+
+console.log('Beginning download')
 do {
     pageNum++;
-    console.log('Page', pageNum)
+    console.log('Downloading page ', pageNum)
     const sourcePaths = await downloadPage(page, BOOK, pageNum);
     path = generateHTML(sourcePaths, pageNum);
     if (path != null) pathList.push(path);
-    if(pageNum === 15) break;
+    if (pageNum === 10) break;
 } while (path !== null)
 
-console.log(`Execution stopped at page ${pageNum}`);
+console.log(`Download finished at page ${pageNum}`);
 
 await browser.close();
 
-await genereatePDF('microbiologia', pathList);
+console.log('Assembling into a PDF file');
+await generatePdf('microbiologia', pathList);
+console.log('Done, cleaning up...');
 
+fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
+fs.rm('html', { recursive: true }, err => { if (err) throw err; });
+
+console.log('Execution complete, exiting...')
 
 //Login to the UniTO intranet
 async function login(page: Page, username: string, password: string) {
@@ -144,10 +158,56 @@ function generateHTML(paths: HTMLPage, page: number) {
     return null;
 }
 
-async function genereatePDF(fileName: string, paths: string[]) {
-    fileName += '.pdf';
-    console.log(fileName)
-    console.log(paths)
+async function generatePdf(outPath: string, paths: string[]) {
+    const pdfDoc = await PDFDocument.create();
+
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    await page.setViewport({ height: 650, width: 508 });
+
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
+
+    for (const path of paths) {
+        const pdfBytes = await generatePdfSinglePage(path, page);
+        const pdfDocBytes = await PDFDocument.load(pdfBytes);
+        const [pdfDocPage] = await pdfDoc.copyPages(pdfDocBytes, [0]);
+        pdfDoc.addPage(pdfDocPage);
+    }
+
+    await browser.close();
+
+
+    // Save the PDF to a file
+    const pdfBytes = await pdfDoc.save();
+    fs.writeFileSync(outPath + '.pdf', pdfBytes);
+
+
+    async function generatePdfSinglePage(html: string, page: Page) {
+        await page.goto(getPath(html), { waitUntil: 'networkidle0' });
+
+        // Wait for the page to finish loading
+        await page.waitForSelector('img');
+
+
+        // Set the PDF dimensions
+        const pdfOptions = {
+            width: '508px',
+            height: '650px',
+            printBackground: true, // Capture background colors and images
+        };
+
+        // Generate the PDF
+        const pdfBuffer = await page.pdf(pdfOptions);
+
+        return pdfBuffer;
+
+        function getPath(file: string) {
+            const __dirname = dirname(fileURLToPath(import.meta.url));
+
+            return __dirname + file.slice(1);
+        }
+    }
 }
 
 interface HTMLPage {
