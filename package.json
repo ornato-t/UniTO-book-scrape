@@ -4,9 +4,8 @@
   "description": " A web scraper and PDF generating script for the virtual library of the UniTO university. ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index es",
-    "build": "node build.mjs"
+    "start": "tsc -p tsconfig.json && node index es",
+    "build": "node build.mjs && node nexe.cjs"
   },
   "repository": {
     "type": "git",
@@ -20,9 +19,12 @@
   "homepage": "https://github.com/ornato-t/UniTO-book-scrape#readme",
   "dependencies": {
     "dotenv": "^16.0.3",
-    "esbuild": "0.17.11",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^19.7.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.17.11",
+    "nexe": "^4.0.0-rc.2"
   },
   "type": "module"
 }

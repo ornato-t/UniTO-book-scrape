@@ -9,8 +9,4 @@
 /html
 *.pdf
 
-out-linux
-out-macos
-out-win.exe
-out
-*.cjs
+/dist
