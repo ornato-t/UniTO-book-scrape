@@ -34,6 +34,24 @@ per compilare `index.ts` ed eseguire il risultante file `index.js`.
 npm run build
 ```
 
+## Errori frequenti
+Un errore durante l'esecuzione non è una tragedia! Ecco una lista degli errori più frequenti
+
+### Durante il download
+`Error 404 while downloading 1.svg`  
+Questo è un errore molto comune. Indica che non è stato trovato (404) un file di testo (.svg) per la pagina 1. Naturalmente il numero può essere differente, a seconda della pagina.  
+Alcune pagine non dispongono di testo, per cui alcune sporadiche istanze di questo errore sono del tutto normali e non indicano un fallimento critico.
+
+### Prima del download
+`Error, inputs can't be empty`  
+Indica che almeno uno dei campi (username, password, link) non sono stati compilati. Ripetere l'esecuzione, avendo cura di riempirli tutti.
+
+`Error, invalid book URL`  
+Indica che il link fornito non è valido. Ripetere l'esecuzione, avendo cura di copiare completamente il link. A titolo informativo, ecco un esempio dell'aspetto che dovrebbe avere il link:
+```
+http://unito.studenti33.it/secure/docs/00000000000000/HTML/0000/index.html
+```
+
 ## Disclaimer
 Lo sviluppatore non ha modo di controllare l'uso che viene fatto dei PDF generati; pertanto ogni responsabilità è a carico degli utenti.
 
@@ -72,6 +90,24 @@ to compile `index.ts` and run the resulting `index.js` file.
 It is also possible to compile said file into a binary (.exe) via
 ```bash
 npm run build
+```
+
+## Troubleshooting, frequent errors
+An error during the execution isn't necessarily a tragedy! Here is a list of the most frequent ones
+
+### During the download
+`Error 404 while downloading 1.svg`  
+This is a very common error. It means that a text file (.svg) wasn't found (404). Naturally, the number preceding (.svg) may be different, depending on the page number.  
+Some pages don't have any text in them, therefore this error is very common and doesn't imply a critical failure.
+
+### Before the download
+`Error, inputs can't be empty`  
+This means that at least one of the input fields (username, password, link) hasn't been filled. Repeat the execution, making sure to fill every field.
+
+`Error, invalid book URL`  
+This means that the provided link isn't valid. Repeat the execution, making sure to properly copy and paste the link. As an example, here's how the link is supposed to look like:
+```
+http://unito.studenti33.it/secure/docs/00000000000000/HTML/0000/index.html
 ```
 
 ## Disclaimer
