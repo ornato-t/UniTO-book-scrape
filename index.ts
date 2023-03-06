@@ -21,14 +21,24 @@ import { fileURLToPath } from 'url';
         process.exit();
     }
 
-    console.log();
+    //Match a unito book url, capture the book id
+    const regex = /http:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML\/[0-9]+\/index\.html/;
+    if (!regex.test(BOOK)) {
+        console.log('Error, invalid book URL');
+        process.exit();
+    }
+
+    //Extract book code via regex capture group
+    const code = BOOK.match(regex)?.[1] ?? '';
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
 
-    console.log('Attempting login')
+    console.log('\nAttempting login');
     await login(page, USERNAME, PWD);
-    console.log('Login succesful\n')
+    console.log('Login succesful\n');
+
+    const title = await getBookTitle(page, BOOK);
 
     //Create new downloads dir
     if (!fs.existsSync('downloads')) {
@@ -43,22 +53,21 @@ import { fileURLToPath } from 'url';
     let path: string | null;   //Last HTML file generated
     const pathList: string[] = []; //Array of paths to HTML files
 
-    console.log('\nBeginning download')
+    console.log(`\nBeginning download of: "${title}"`)
     do {
         pageNum++;
         console.log('Downloading page ', pageNum)
-        const sourcePaths = await downloadPage(page, BOOK, pageNum);
+        const sourcePaths = await downloadPage(page, code, pageNum);
         path = generateHTML(sourcePaths, pageNum);
         if (path != null) pathList.push(path);
-        if (pageNum === 10) break;
     } while (path !== null)
 
-    console.log(`\nDownload finished at page ${pageNum }\n`);
+    console.log(`\nDownload finished at page ${pageNum}\n`);
 
     await browser.close();
 
     console.log('Assembling into a PDF file\n');
-    await generatePdf('microbiologia', pathList);
+    await generatePdf(title, pathList);
     console.log('Done, cleaning up...\n');
 
     fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
@@ -105,6 +114,12 @@ async function login(page: Page, username: string, password: string) {
 
     //Wait for series of redirects to be over - we want to be sure that we're logged in
     await page.waitForNetworkIdle();
+}
+
+async function getBookTitle(page: Page, url: string) {
+    await page.goto(url, { waitUntil: 'networkidle0' });
+
+    return await page.title();
 }
 
 //Download a page's text and background
