@@ -1,58 +1,59 @@
 import puppeteer, { Page } from "puppeteer";
 import { PDFDocument } from "pdf-lib"
-import dotenv from "dotenv"
-import fs from "fs"
+import dotenv from "dotenv";
+import fs from "fs";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+(async () => {
+    dotenv.config();
+    const USERNAME = process.env.NAME ?? '';
+    const PWD = process.env.PWD ?? '';
+    const BOOK = process.env.BOOK ?? '';
 
-dotenv.config();
-const USERNAME = process.env.NAME ?? '';
-const PWD = process.env.PWD ?? '';
-const BOOK = process.env.BOOK ?? '';
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
 
-const browser = await puppeteer.launch();
-const page = await browser.newPage();
+    console.log('Attempting login')
+    await login(page, USERNAME, PWD);
+    console.log('Login succesful')
 
-console.log('Attempting login')
-await login(page, USERNAME, PWD);
-console.log('Login succesful')
+    //Create new downloads dir
+    if (!fs.existsSync('downloads')) {
+        fs.mkdirSync('downloads');
+    }
+    //Create new html dir
+    if (!fs.existsSync('html')) {
+        fs.mkdirSync('html');
+    }
 
-//Create new downloads dir
-if (!fs.existsSync('downloads')) {
-    fs.mkdirSync('downloads');
-}
-//Create new html dir
-if (!fs.existsSync('html')) {
-    fs.mkdirSync('html');
-}
+    let pageNum = 0;
+    let path: string | null;   //Last HTML file generated
+    const pathList: string[] = []; //Array of paths to HTML files
 
-let pageNum = 0;
-let path: string | null;   //Last HTML file generated
-const pathList: string[] = []; //Array of paths to HTML files
+    console.log('Beginning download')
+    do {
+        pageNum++;
+        console.log('Downloading page ', pageNum)
+        const sourcePaths = await downloadPage(page, BOOK, pageNum);
+        path = generateHTML(sourcePaths, pageNum);
+        if (path != null) pathList.push(path);
+        if (pageNum === 10) break;
+    } while (path !== null)
 
-console.log('Beginning download')
-do {
-    pageNum++;
-    console.log('Downloading page ', pageNum)
-    const sourcePaths = await downloadPage(page, BOOK, pageNum);
-    path = generateHTML(sourcePaths, pageNum);
-    if (path != null) pathList.push(path);
-    if (pageNum === 10) break;
-} while (path !== null)
+    console.log(`Download finished at page ${pageNum}`);
 
-console.log(`Download finished at page ${pageNum}`);
+    await browser.close();
 
-await browser.close();
+    console.log('Assembling into a PDF file');
+    await generatePdf('microbiologia', pathList);
+    console.log('Done, cleaning up...');
 
-console.log('Assembling into a PDF file');
-await generatePdf('microbiologia', pathList);
-console.log('Done, cleaning up...');
+    fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
+    fs.rm('html', { recursive: true }, err => { if (err) throw err; });
 
-fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
-fs.rm('html', { recursive: true }, err => { if (err) throw err; });
-
-console.log('Execution complete, exiting...')
+    console.log('Execution complete, exiting...');
+})();
 
 //Login to the UniTO intranet
 async function login(page: Page, username: string, password: string) {
@@ -203,8 +204,10 @@ async function generatePdf(outPath: string, paths: string[]) {
         return pdfBuffer;
 
         function getPath(file: string) {
-            const __dirname = dirname(fileURLToPath(import.meta.url));
+            //If run with "npm start" manually fetch dir name
+            if (process.argv[2] === 'es') return dirname(fileURLToPath(import.meta.url)) + file.slice(1);
 
+            //If run from commonJS file dirname is already defined
             return __dirname + file.slice(1);
         }
     }
