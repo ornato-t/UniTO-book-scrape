@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "tsc -p tsconfig.json && node index es",
-    "build": "node build.mjs && node nexe.cjs"
+    "build": "node build.mjs"
   },
   "repository": {
     "type": "git",
