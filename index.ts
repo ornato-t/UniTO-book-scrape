@@ -68,7 +68,7 @@ import { fileURLToPath } from 'url';
 
     console.log('Assembling into a PDF file\n');
     await generatePdf(title, pathList);
-    console.log('Done, cleaning up...\n');
+    console.log('\nDone, cleaning up...\n');
 
     fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
     fs.rm('html', { recursive: true }, err => { if (err) throw err; });
@@ -211,14 +211,17 @@ function generateHTML(paths: HTMLPage, page: number) {
 async function generatePdf(outPath: string, paths: string[]) {
     const pdfDoc = await PDFDocument.create();
 
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     await page.setViewport({ height: 650, width: 508 });
 
     page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
 
+    let pageNum = 0;
     for (const path of paths) {
+        pageNum++;
+        console.log('Assembling page', pageNum)
         const pdfBytes = await generatePdfSinglePage(path, page);
         const pdfDocBytes = await PDFDocument.load(pdfBytes);
         const [pdfDocPage] = await pdfDoc.copyPages(pdfDocBytes, [0]);
