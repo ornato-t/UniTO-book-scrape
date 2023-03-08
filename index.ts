@@ -21,6 +21,8 @@ import { fileURLToPath } from 'url';
         process.exit();
     }
 
+    console.log('UniTo merda')
+
     //Match a unito book url, capture the book id
     const regex = /http:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML\/[0-9]+\/index\.html/;
     if (!regex.test(BOOK)) {
