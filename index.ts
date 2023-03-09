@@ -1,6 +1,7 @@
 import puppeteer, { Page } from "puppeteer";
 import { PDFDocument } from "pdf-lib"
 import * as readline from 'readline';
+import imageSize from 'image-size';
 import fs from "fs";
 
 import { dirname } from 'path';
@@ -66,8 +67,10 @@ import { fileURLToPath } from 'url';
 
     await browser.close();
 
+    const { width, height } = getImageSize(pathList)
+
     console.log('Assembling into a PDF file\n');
-    await generatePdf(title, pathList);
+    await generatePdf(title, pathList, width, height);
     console.log('\nDone, cleaning up...\n');
 
     fs.rm('downloads', { recursive: true }, err => { if (err) throw err; });
@@ -208,12 +211,24 @@ function generateHTML(paths: HTMLPage, page: number) {
     return null;
 }
 
-async function generatePdf(outPath: string, paths: string[]) {
+//Returns the width and height of the last image of the path list
+function getImageSize(paths: string[]) {
+    const html = paths.at(-1) ?? './html/1.html';    //Path of the last image in the book
+    const regex = /\.\/html\/([0-9]+)\.html/;   //Regex to extract the page number
+    const pageCode = html.match(regex)?.[1] ?? '1';  //Number of the html page
+    const page = `./downloads/${pageCode}.jpeg`;
+
+    const dims = imageSize(page);
+
+    return { width: dims.width ?? 500, height: dims.height ?? 600 }
+}
+
+async function generatePdf(outPath: string, paths: string[], width: number, height: number) {
     const pdfDoc = await PDFDocument.create();
 
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-    await page.setViewport({ height: 650, width: 508 });
+    await page.setViewport({ height: height, width: width });
 
     page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
     page.on('pageerror', (err) => console.log('PAGE ERROR:', err));
@@ -222,7 +237,7 @@ async function generatePdf(outPath: string, paths: string[]) {
     for (const path of paths) {
         pageNum++;
         console.log('Assembling page', pageNum)
-        const pdfBytes = await generatePdfSinglePage(path, page);
+        const pdfBytes = await generatePdfSinglePage(path, page, width, height);
         const pdfDocBytes = await PDFDocument.load(pdfBytes);
         const [pdfDocPage] = await pdfDoc.copyPages(pdfDocBytes, [0]);
         pdfDoc.addPage(pdfDocPage);
@@ -236,7 +251,7 @@ async function generatePdf(outPath: string, paths: string[]) {
     fs.writeFileSync(outPath + '.pdf', pdfBytes);
 
 
-    async function generatePdfSinglePage(html: string, page: Page) {
+    async function generatePdfSinglePage(html: string, page: Page, width: number, height: number) {
         await page.goto(getPath(html), { waitUntil: 'networkidle0' });
 
         // Wait for the page to finish loading
@@ -245,8 +260,8 @@ async function generatePdf(outPath: string, paths: string[]) {
 
         // Set the PDF dimensions
         const pdfOptions = {
-            width: '508px',
-            height: '650px',
+            width: `${width}px`,
+            height: `${height}px`,
             printBackground: true, // Capture background colors and images
         };
 

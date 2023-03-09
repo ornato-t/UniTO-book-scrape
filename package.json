@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/ornato-t/UniTO-book-scrape#readme",
   "dependencies": {
+    "image-size": "^1.0.2",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^19.7.2"
   },
