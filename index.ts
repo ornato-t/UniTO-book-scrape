@@ -23,7 +23,7 @@ import { fileURLToPath } from 'url';
     }
 
     //Match a unito book url, capture the book id
-    const regex = /http:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML\/[0-9]+\/index\.html/;
+    const regex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML(?:\/[0-9]+)?\/index\.html/;   //"s" in "https" and page number are optional, captures the book id
     if (!regex.test(BOOK)) {
         console.log('Error, invalid book URL');
         process.exit();
