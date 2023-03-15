@@ -7,6 +7,8 @@ import fs from "fs";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+// import cred from './dev.js';    //DEV
+
 (async () => {
     console.log('Welcome to UniTO-book-scrape! This is a CLI utility for downloading books from the UniTO library 📚');
     console.log('Access to this application and the generated PDF documents is reserved for enrolled UniTO students with valid credentials 🔐');
@@ -16,21 +18,14 @@ import { fileURLToPath } from 'url';
     console.log('Your UniTO credentials are safe! This application doesn\'t save them and only uses them for the authenthication process 👀\n')
 
     const { USERNAME, PWD, BOOK } = await getCredentials();
+    // const { USERNAME, PWD, BOOK } = cred;   //DEV
 
     if (USERNAME === '' || PWD === '' || BOOK === '') {
         console.log('Error, inputs can\'t be empty');
         process.exit();
     }
 
-    //Match a unito book url, capture the book id
-    const regex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML(?:\/[0-9]+)?\/index\.html/;   //"s" in "https" and page number are optional, captures the book id
-    if (!regex.test(BOOK)) {
-        console.log('Error, invalid book URL');
-        process.exit();
-    }
-
-    //Extract book code via regex capture group
-    const code = BOOK.match(regex)?.[1] ?? '';
+    const { code, type } = checkURL(BOOK);
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -39,7 +34,7 @@ import { fileURLToPath } from 'url';
     await login(page, USERNAME, PWD);
     console.log('Login succesful\n');
 
-    const title = await getBookTitle(page, BOOK);
+    const title = await getBookTitle(page, code, type);
 
     //Create new downloads dir
     if (!fs.existsSync('downloads')) {
@@ -58,7 +53,7 @@ import { fileURLToPath } from 'url';
     do {
         pageNum++;
         console.log('Downloading page ', pageNum)
-        const sourcePaths = await downloadPage(page, code, pageNum);
+        const sourcePaths = await downloadPage(page, code, type, pageNum);
         path = generateHTML(sourcePaths, pageNum);
         if (path != null) pathList.push(path);
     } while (path !== null)
@@ -78,6 +73,36 @@ import { fileURLToPath } from 'url';
 
     console.log('Execution complete, exiting\n');
 })();
+
+//Check a URL and assign a type to it. Either "text" or "num"
+function checkURL(url: string) {
+    /*
+    Match a UniTO book URL. The "s" in "https" and the page number are optional
+    textRegex matches the url of a book code containing text
+    numRegex matches the url of a numeric book code
+    */
+    const textRegex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/(\w+)(?:\/[0-9]+)?\/index\.html/;
+    const numRegex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML(?:\/[0-9]+)?\/index\.html/;
+
+    let type: 'text' | 'num';
+    let code: string;
+
+    //Extract book code via regex capture group
+    if (numRegex.test(url)) {
+        code = url.match(numRegex)?.[1] ?? '';
+        type = 'num';
+        
+    } else if (textRegex.test(url)) {
+        code = url.match(textRegex)?.[1] ?? '';
+        type = 'text';
+
+    } else {
+        console.log('Error, invalid book URL');
+        process.exit();
+    }
+
+    return { code, type };
+}
 
 async function getCredentials(): Promise<{ USERNAME: string, PWD: string, BOOK: string }> {
     const rl = readline.createInterface({
@@ -119,16 +144,35 @@ async function login(page: Page, username: string, password: string) {
     await page.waitForNetworkIdle();
 }
 
-async function getBookTitle(page: Page, url: string) {
+//Loads the book's first page and returns its title
+async function getBookTitle(page: Page, code: string, type: "num" | "text") {
+    let url: string;
+    if (type === 'num') {
+        url = `http://unito.studenti33.it/secure/docs/${code}/HTML/1/index.html`;
+    } else if (type === 'text') {
+        url = `http://unito.studenti33.it/secure/docs/${code}/1/index.html`;
+    } else {
+        return 'Unknown';
+    }
+
     await page.goto(url, { waitUntil: 'networkidle0' });
 
     return await page.title();
 }
 
 //Download a page's text and background
-async function downloadPage(page: Page, bookCode: string, pageNum: number): Promise<HTMLPage> {
-    const imgUrl = `https://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-html5-substrates/page${pageNumFixed(pageNum)}_1.jpg?uni=557d76170c245168845e5673708d98fd`;
-    const textUrl = `http://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=557d76170c245168845e5673708d98fd`;
+async function downloadPage(page: Page, bookCode: string, type: 'num' | 'text', pageNum: number): Promise<HTMLPage> {
+    const imgUrl = (() => {
+        if (type === 'num') return `https://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-html5-substrates/page${pageNumFixed(pageNum)}_1.jpg?uni=557d76170c245168845e5673708d98fd`;
+        else if (type === 'text') return `http://unito.studenti33.it/secure/docs/${bookCode}/files/assets/common/page-html5-substrates/page${pageNumFixed(pageNum)}_2.jpg?uni=02c8998da95b857ae7ea9a28539cd252`;
+        else return '';
+    })();
+    const textUrl = (() => {
+        if (type === 'num') return `http://unito.studenti33.it/secure/docs/${bookCode}/HTML//files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=557d76170c245168845e5673708d98fd`;
+        else if (type === 'text') return `http://unito.studenti33.it/secure/docs/${bookCode}/files/assets/common/page-vectorlayers/${pageNumFixed(pageNum)}.svg?uni=02c8998da95b857ae7ea9a28539cd252`;
+        else return '';
+    })();
+
     const outPath = `downloads/${pageNum}`;
     let textCode = 200, imgCode = 200;
     const paths: HTMLPage = new Object();
