@@ -257,14 +257,22 @@ function generateHTML(paths: HTMLPage, page: number) {
 
 //Returns the width and height of the last image of the path list
 function getImageSize(paths: string[]) {
-    const html = paths.at(-1) ?? './html/1.html';    //Path of the last image in the book
     const regex = /\.\/html\/([0-9]+)\.html/;   //Regex to extract the page number
-    const pageCode = html.match(regex)?.[1] ?? '1';  //Number of the html page
-    const page = `./downloads/${pageCode}.jpeg`;
 
-    const dims = imageSize(page);
+    //If no last page found, decrease by one and retry
+    for (let i = paths.length - 1; i >= 0; i--) {
+        const html = paths[i] ?? './html/1.html';    //Path of the last image in the book
+        const pageCode = html.match(regex)?.[1] ?? '1';  //Number of the html page
+        const page = `./downloads/${pageCode}.jpeg`;
+        try {
+            const dims = imageSize(page);
+            return { width: dims.width ?? 500, height: dims.height ?? 600 }
+        } catch (_) {
+            console.log(`No image found at page ${pageCode}, trying ${Number.parseInt(pageCode) - 1}`)
+        }
+    }
 
-    return { width: dims.width ?? 500, height: dims.height ?? 600 }
+    return { width: 500, height: 600 }; //If everything else fails, return default value
 }
 
 async function generatePdf(outPath: string, paths: string[], width: number, height: number) {
