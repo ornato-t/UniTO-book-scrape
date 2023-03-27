@@ -81,7 +81,7 @@ function checkURL(url: string) {
     textRegex matches the url of a book code containing text
     numRegex matches the url of a numeric book code
     */
-    const textRegex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/(\w+)(?:\/[0-9]+)?\/index\.html/;
+    const textRegex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/([\w-]+)(?:\/[0-9]+)?\/index\.html/;
     const numRegex = /https?:\/\/unito\.studenti33\.it\/secure\/docs\/([0-9]+)\/HTML(?:\/[0-9]+)?\/index\.html/;
 
     let type: 'text' | 'num';
